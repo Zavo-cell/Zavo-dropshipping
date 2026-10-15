@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZAVO | Great Deals, Delivered.</title>
+<!-- Paystack Inline JS SDK -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+:root{--pink-base:#e056fd;--pink-light:#f7f1e3;--purple-deep:#4834d4;--gradient:linear-gradient(135deg, #ff9ff3, #f368e0, #54a0ff);--ink:#2f3640;--muted:#718093;--green:#00b894;--white:#ffffff}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;color:var(--ink);background:#fcf5fb}
+header{background:var(--gradient);color:white;padding:20px max(20px,calc((100% - 1200px)/2));display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(224,86,253,0.2)}
+strong.logo{font-size:30px;letter-spacing:2px;font-weight:900}strong.logo span{color:#fff}
+a{color:inherit;text-decoration:none}
+main{max-width:1200px;margin:30px auto;padding:0 20px}
+.hero{background:white;border-radius:24px;padding:clamp(24px,5vw,50px);box-shadow:0 10px 30px rgba(108,92,231,0.08);text-align:center;background:linear-gradient(145deg, #ffffff, #fff0f6)}
+.hero h1{font-size:clamp(28px,5vw,46px);margin:10px 0;color:#2c3e50}
+.hero p{color:var(--muted);font-size:16px;max-width:600px;margin:0 auto 20px}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;margin-top:30px}
+/* Exact Match Card Styling to Sample Image */
+.prod-card{background:#000000;color:white;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 35px rgba(0,0,0,0.3);position:relative}
+.prod-img-wrap{background:white;border-radius:14px;overflow:hidden;aspect-ratio:1/1;display:grid;place-items:center}
+.prod-img-wrap img{width:100%;height:100%;object-fit:cover}
+.prod-title{font-size:20px;font-weight:800;margin:0;color:white}
+.prod-price{font-size:22px;font-weight:800;color:var(--green);margin:2px 0}
+.prod-desc{font-size:14px;color:#dcdde1;line-height:1.4;margin:0}
+.prod-meta{font-size:13px;color:#f5f6fa}
+.stars{color:#fbc531;letter-spacing:2px}
+.btn-buy{background:var(--gradient);border:0;color:white;font-weight:800;padding:14px;border-radius:12px;cursor:pointer;width:100%;font-size:15px;margin-top:auto}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:grid;place-items:center;padding:20px;z-index:100}
+.modal.hidden{display:none}
+.modal-content{background:white;color:var(--ink);width:min(100%,450px);padding:30px;border-radius:22px;box-shadow:0 20px 50px rgba(0,0,0,0.3)}
+.field{display:grid;gap:6px;margin:12px 0}
+.field label{font-size:13px;font-weight:700}
+.field input{padding:12px;border:1px solid #dcdde1;border-radius:10px}
+.foot{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <strong class="logo">ZA<span>V</span>O</strong>
+  <span>✨ Great Deals, Delivered in Kenya</span>
+  <a href="/admin.html" style="background:rgba(255,255,255,0.2);padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;">Admin</a>
+</header>
+<main>
+  <div class="hero">
+    <div style="color:var(--pink-base);font-weight:800;letter-spacing:1px;font-size:12px">EXCLUSIVE MARKETPLACE</div>
+    <h1>Smart Deals & Collections</h1>
+    <p>Discover high-quality trending products with instant secure payments via Paystack and rapid local delivery.</p>
+  </div>
+  
+  <div id="productsGrid" class="products-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Loading exclusive products...</div>
+  </div>
+</main>
+
+<!-- Checkout Modal -->
+<div id="checkoutModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Complete Order</h2>
+    <p id="modalProductTitle" style="font-weight:700;color:var(--pink-base);margin-bottom:10px"></p>
+    <form id="checkoutForm">
+      <input type="hidden" id="modalProductId">
+      <div class="field"><label>Full Name *</label><input id="cName" required placeholder="Sylvester Owino"></div>
+      <div class="field"><label>Email Address (for receipt) *</label><input id="cEmail" type="email" required placeholder="sylvester@example.com"></div>
+      <div class="field"><label>Phone Number (M-Pesa / Contact) *</label><input id="cPhone" required placeholder="0712345678"></div>
+      <div class="field"><label>Delivery Location / Address *</label><input id="cLocation" required placeholder="Nairobi / Kenyatta University"></div>
+      <button type="submit" class="btn-buy" style="margin-top:15px">Pay Securely with Paystack</button>
+      <button type="button" id="closeModal" style="background:none;border:0;color:var(--muted);width:100%;margin-top:10px;cursor:pointer">Cancel</button>
+    </form>
+  </div>
+</div>
+
+<div class="foot">© <span id="year"></span> ZAVO Marketplace · All Rights Reserved.</div>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+let activeProduct = null;
+
+async function loadStoreProducts() {
+  try {
+    const res = await fetch('/api/store/products');
+    const data = await res.json();
+    const grid = document.getElementById('productsGrid');
+    
+    if(!data.products || data.products.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">No published products available yet. Check back soon!</div>';
+      return;
+    }
+
+    grid.innerHTML = data.products.map(p => `
+      <div class="prod-card">
+        <div class="prod-img-wrap">
+          <img src="${p.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'}" alt="${p.title}">
+        </div>
+        <h3 class="prod-title">${p.title}</h3>
+        <div class="prod-price">KSh ${Number(p.price_kes).toLocaleString()}</div>
+        <p class="prod-desc"><b>Description:</b> ${p.description || 'High quality imported product.'}</p>
+        <div class="prod-meta"><b>Colours:</b> ${p.colours || 'Standard'}</div>
+        <div class="prod-meta"><b>Rating:</b> <span class="stars">★★★★☆</span> (${p.rating || 4.5}/5)</div>
+        <button class="btn-buy" onclick='openCheckout(${JSON.stringify(p)})'>Buy Now</button>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function openCheckout(product) {
+  activeProduct = product;
+  document.getElementById('modalProductTitle').textContent = `${product.title} — KSh ${Number(product.price_kes).toLocaleString()}`;
+  document.getElementById('modalProductId').value = product.id;
+  document.getElementById('checkoutModal').classList.remove('hidden');
+}
+
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('checkoutModal').classList.add('hidden');
+});
+
+document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('cName').value;
+  const email = document.getElementById('cEmail').value;
+  const phone = document.getElementById('cPhone').value;
+  const location = document.getElementById('cLocation').value;
+
+  // Paystack Integration Implementation (Inline Popup without leaving site)
+  // Note: Replace pk_live_xxx or use test key pk_test_xxx in Cloudflare / environment
+  const handler = PaystackPop.setup({
+    key: 'pk_test_placeholder_replace_with_your_paystack_key', 
+    email: email,
+    amount: activeProduct.price_kes * 100, // Paystack expects amount in minor units (cents/pesewas/kobo -> KES cents)
+    currency: 'KES',
+    ref: 'ZVO_' + Math.floor((Math.random() * 1000000000) + 1),
+    callback: async function(response) {
+      // Payment successful callback, now record order in backend database
+      try {
+        const res = await fetch('/api/store/checkout', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            productId: activeProduct.id,
+            customerName: name,
+            customerEmail: email,
+            customerPhone: phone,
+            deliveryLocation: location,
+            paymentReference: response.reference
+          })
+        });
+        const result = await res.json();
+        if(res.ok) {
+          alert(`🎉 Success! Order ${result.orderNumber} placed successfully.`);
+          document.getElementById('checkoutModal').classList.add('hidden');
+          document.getElementById('checkoutForm').reset();
+        } else {
+          alert('Error saving order: ' + result.error);
+        }
+      } catch (err) {
+        alert('Network error recording order.');
+      }
+    },
+    onClose: function() {
+      alert('Transaction was cancelled.');
+    }
+  });
+  handler.openIframe();
+});
+
+loadStoreProducts();
+</script>
+</body>
+</html>
