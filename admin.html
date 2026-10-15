@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZAVO Admin Dashboard</title>
+<style>
+:root{--pink:#e056fd;--purple:#4834d4;--ink:#2f3640;--muted:#718093;--bg:#f8f9fa;--line:#dfe4ea;--green:#00b894;--red:#eb4d4b}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,var(--purple),var(--pink))}
+.login{background:#fff;width:min(100%,400px);padding:30px;border-radius:24px;box-shadow:0 20px 50px rgba(0,0,0,0.2)}
+.logo{font-size:32px;font-weight:900;letter-spacing:2px;color:var(--purple)}
+.field{display:grid;gap:6px;margin:14px 0}.field label{font-size:13px;font-weight:700}.field input,.field select,.field textarea,.search{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px}
+.btn{border:0;border-radius:10px;background:var(--pink);padding:12px 16px;font-weight:800;color:white}
+.btn.blue{background:var(--purple);color:white}.btn.light{background:#f1f2f6;color:var(--ink)}
+.layout{min-height:100vh;display:grid;grid-template-columns:240px 1fr}
+.side{background:#1e1e24;color:white;padding:22px;display:flex;flex-direction:column;gap:20px}
+.side .logo{color:white}
+.nav{display:grid;gap:6px}.nav button{border:0;text-align:left;background:transparent;color:#b2bec3;padding:12px;border-radius:10px;font-weight:600}
+.nav button.active,.nav button:hover{background:var(--pink);color:white}
+.main{min-width:0}.top{background:#fff;border-bottom:1px solid var(--line);padding:18px 24px;display:flex;align-items:center;justify-content:space-between}
+.content{padding:24px;max-width:1400px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:20px 0}
+.card{background:white;border:1px solid var(--line);border-radius:16px;padding:20px}
+.metric{font-size:26px;font-weight:900;margin:8px 0 2px;color:var(--purple)}
+.metric-label{font-size:13px;color:var(--muted);font-weight:600}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}
+th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}
+th{color:var(--muted);background:#f8f9fa;font-weight:700}
+.pill{display:inline-block;padding:4px 10px;border-radius:99px;background:#dfe4ea;font-size:11px;font-weight:800}
+.pill.green{background:#e3fcef;color:var(--green)}.pill.orange{background:#fff3cd;color:#d35400}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-grid .full{grid-column:1/-1}
+.toast{position:fixed;right:20px;bottom:20px;background:#2f3640;color:#fff;padding:14px 20px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:1000}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<section id="loginScreen" class="login-wrap">
+  <form id="loginForm" class="login">
+    <div class="logo">ZA<span>V</span>O</div>
+    <h2>Admin Sign In</h2>
+    <p style="color:var(--muted);font-size:13px">Enter your secure password to manage ZAVO store.</p>
+    <div class="field"><label>Admin Password</label><input id="password" type="password" required placeholder="••••••••"></div>
+    <button class="btn blue" style="width:100%" type="submit">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:13px;margin-top:10px"></div>
+  </form>
+</section>
+
+<div id="app" class="layout hidden">
+  <aside class="side">
+    <div class="logo">ZA<span>V</span>O</div>
+    <nav class="nav" id="nav">
+      <button class="active" data-page="dashboard">📊 Dashboard</button>
+      <button data-page="products">📦 Products</button>
+      <button data-page="orders">🛒 Orders</button>
+      <button data-page="suppliers">🤝 Suppliers</button>
+      <button data-page="activity">📋 Audit Log</button>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <h1 id="pageTitle" style="font-size:20px;margin:0">Dashboard</h1>
+      <button class="btn light" id="logoutBtn">Sign Out</button>
+    </header>
+    <div class="content">
+      
+      <!-- Dashboard Page -->
+      <section id="page-dashboard" class="page">
+        <div class="cards">
+          <div class="card"><div class="metric-label">Total Products</div><div class="metric" id="mProducts">—</div></div>
+          <div class="card"><div class="metric-label">Total Orders</div><div class="metric" id="mOrders">—</div></div>
+          <div class="card"><div class="metric-label">Paid Revenue</div><div class="metric" id="mRevenue">—</div></div>
+          <div class="card"><div class="metric-label">Active Suppliers</div><div class="metric" id="mSuppliers">—</div></div>
+        </div>
+        <div class="card">
+          <h3>Recent Orders</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order #</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th></tr></thead>
+              <tbody id="recentOrders"><tr><td colspan="5">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Products Page -->
+      <section id="page-products" class="page hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+          <h2>Product Catalogue</h2>
+          <button class="btn" id="showProductForm">＋ Add Product</button>
+        </div>
+        <form id="productForm" class="card hidden" style="margin-bottom:20px">
+          <h3 id="productFormTitle">Add Product</h3>
+          <input type="hidden" id="productId">
+          <div class="form-grid">
+            <div class="field"><label>Title *</label><input id="pTitle" required></div>
+            <div class="field"><label>Category</label><input id="pCategory" placeholder="e.g. Electronics"></div>
+            <div class="field full"><label>Description</label><textarea id="pDescription" rows="2"></textarea></div>
+            <div class="field full"><label>Image URL</label><input id="pImage" type="url" placeholder="https://..."></div>
+            <div class="field"><label>Colours</label><input id="pColours" value="Black, White"></div>
+            <div class="field"><label>Listing Status</label><select id="pStatus"><option value="draft">Draft</option><option value="published">Published</option></select></div>
+            <div class="field"><label>Cost Price (KES)</label><input id="pCost" type="number" value="0"></div>
+            <div class="field"><label>Selling Price (KES)</label><input id="pPrice" type="number" value="0"></div>
+            <div class="field"><label>Stock Quantity</label><input id="pStock" type="number" value="10"></div>
+          </div>
+          <button class="btn blue" type="submit" style="margin-top:15px">Save Product</button>
+          <button type="button" class="btn light" id="cancelProduct">Cancel</button>
+        </form>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Title</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="productsBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Orders Page -->
+      <section id="page-orders" class="page hidden">
+        <h2>Customer Orders</h2>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order #</th><th>Customer</th><th>Phone</th><th>Location</th><th>Total</th><th>Payment</th><th>Date</th></tr></thead>
+              <tbody id="ordersBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Suppliers Page -->
+      <section id="page-suppliers" class="page hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+          <h2>Suppliers</h2>
+          <button class="btn" id="showSupplierForm">＋ Add Supplier</button>
+        </div>
+        <form id="supplierForm" class="card hidden" style="margin-bottom:20px">
+          <h3>Add Supplier</h3>
+          <div class="form-grid">
+            <div class="field"><label>Supplier Name *</label><input id="sName" required></div>
+            <div class="field"><label>Contact / Phone</label><input id="sContact"></div>
+            <div class="field"><label>Country</label><input id="sCountry" value="Kenya"></div>
+            <div class="field"><label>Status</label><select id="sStatus"><option value="active">Active</option><option value="paused">Paused</option></select></div>
+            <div class="field full"><label>Notes</label><textarea id="sNotes" rows="2"></textarea></div>
+          </div>
+          <button class="btn blue" type="submit" style="margin-top:15px">Save Supplier</button>
+        </form>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Contact</th><th>Country</th><th>Status</th><th>Added</th></tr></thead>
+              <tbody id="suppliersBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Activity Log Page -->
+      <section id="page-activity" class="page hidden">
+        <h2>Audit Activity Log</h2>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Action</th><th>Item Type</th><th>Item ID</th><th>Date</th></tr></thead>
+              <tbody id="activityBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const money = n => 'KES ' + Number(n||0).toLocaleString();
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{'content-type':'application/json'}, ...opts});
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || 'Request failed');
+  return d;
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'), 3000);
+}
+
+// Navigation
+document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById('page-'+b.dataset.page).classList.remove('hidden');
+  document.querySelectorAll('[data-page]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('pageTitle').textContent = b.textContent.trim().split(' ')[1];
+  if(b.dataset.page==='products') loadProducts();
+  if(b.dataset.page==='orders') loadOrders();
+  if(b.dataset.page==='suppliers') loadSuppliers();
+  if(b.dataset.page==='activity') loadActivity();
+}));
+
+// Auth
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    await api('/api/admin/login', {method:'POST', body:JSON.stringify({password:document.getElementById('password').value})});
+    checkSession();
+  } catch(err) {
+    document.getElementById('loginError').textContent = err.message;
+  }
+});
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await api('/api/admin/logout', {method:'POST'});
+  location.reload();
+});
+
+async function checkSession() {
+  try {
+    await api('/api/admin/me');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    loadDashboard();
+  } catch {
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+  }
+}
+
+async function loadDashboard() {
+  const d = await api('/api/admin/summary');
+  const s = d.summary;
+  document.getElementById('mProducts').textContent = s.products;
+  document.getElementById('mOrders').textContent = s.orders;
+  document.getElementById('mRevenue').textContent = money(s.revenueKes);
+  document.getElementById('mSuppliers').textContent = s.activeSuppliers;
+  document.getElementById('recentOrders').innerHTML = s.recentOrders.length ? s.recentOrders.map(o => `
+    <tr><td>${o.order_number}</td><td>${o.customer_name}</td><td>${o.customer_phone}</td><td>${money(o.total_kes)}</td><td><span class="pill ${o.payment_status==='paid'?'green':'orange'}">${o.payment_status}</span></td></tr>
+  `).join('') : '<tr><td colspan="5">No orders yet</td></tr>';
+}
+
+async function loadProducts() {
+  const d = await api('/api/admin/products');
+  document.getElementById('productsBody').innerHTML = d.products.length ? d.products.map(p => `
+    <tr><td><b>${p.title}</b></td><td>${p.category}</td><td>${money(p.price_kes)}</td><td>${p.stock}</td><td><span class="pill ${p.status==='published'?'green':'orange'}">${p.status}</span></td><td><button class="btn light" onclick='editProduct(${JSON.stringify(p)})'>Edit</button></td></tr>
+  `).join('') : '<tr><td colspan="6">No products found</td></tr>';
+}
+
+document.getElementById('showProductForm').addEventListener('click', () => {
+  document.getElementById('productForm').reset();
+  document.getElementById('productId').value = '';
+  document.getElementById('productFormTitle').textContent = 'Add Product';
+  document.getElementById('productForm').classList.remove('hidden');
+});
+document.getElementById('cancelProduct').addEventListener('click', () => document.getElementById('productForm').classList.add('hidden'));
+
+document.getElementById('productForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = document.getElementById('productId').value;
+  const data = {
+    title: document.getElementById('pTitle').value,
+    category: document.getElementById('pCategory').value,
+    description: document.getElementById('pDescription').value,
+    image_url: document.getElementById('pImage').value,
+    colours: document.getElementById('pColours').value,
+    status: document.getElementById('pStatus').value,
+    cost_kes: document.getElementById('pCost').value,
+    price_kes: document.getElementById('pPrice').value,
+    stock: document.getElementById('pStock').value
+  };
+  await api(id ? '/api/admin/products/'+id : '/api/admin/products', {method: id?'PATCH':'POST', body:JSON.stringify(data)});
+  toast('Product saved successfully');
+  document.getElementById('productForm').classList.add('hidden');
+  loadProducts();
+  loadDashboard();
+});
+
+function editProduct(p) {
+  document.getElementById('productId').value = p.id;
+  document.getElementById('pTitle').value = p.title;
+  document.getElementById('pCategory').value = p.category;
+  document.getElementById('pDescription').value = p.description;
+  document.getElementById('pImage').value = p.image_url;
+  document.getElementById('pColours').value = p.colours;
+  document.getElementById('pStatus').value = p.status;
+  document.getElementById('pCost').value = p.cost_kes;
+  document.getElementById('pPrice').value = p.price_kes;
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('productFormTitle').textContent = 'Edit Product';
+  document.getElementById('productForm').classList.remove('hidden');
+}
+
+async function loadOrders() {
+  const d = await api('/api/admin/orders');
+  document.getElementById('ordersBody').innerHTML = d.orders.length ? d.orders.map(o => `
+    <tr><td>${o.order_number}</td><td>${o.customer_name}</td><td>${o.customer_phone}</td><td>${o.delivery_location}</td><td>${money(o.total_kes)}</td><td><span class="pill ${o.payment_status==='paid'?'green':'orange'}">${o.payment_status}</span></td><td>${o.created_at}</td></tr>
+  `).join('') : '<tr><td colspan="7">No orders recorded</td></tr>';
+}
+
+document.getElementById('showSupplierForm').addEventListener('click', () => document.getElementById('supplierForm').classList.remove('hidden'));
+document.getElementById('supplierForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  await api('/api/admin/suppliers', {method:'POST', body:JSON.stringify({
+    name: document.getElementById('sName').value,
+    contact: document.getElementById('sContact').value,
+    country: document.getElementById('sCountry').value,
+    status: document.getElementById('sStatus').value,
+    notes: document.getElementById('sNotes').value
+  })});
+  toast('Supplier saved');
+  document.getElementById('supplierForm').classList.add('hidden');
+  loadSuppliers();
+});
+
+async function loadSuppliers() {
+  const d = await api('/api/admin/suppliers');
+  document.getElementById('suppliersBody').innerHTML = d.suppliers.length ? d.suppliers.map(s => `
+    <tr><td>${s.name}</td><td>${s.contact}</td><td>${s.country}</td><td><span class="pill green">${s.status}</span></td><td>${s.created_at}</td></tr>
+  `).join('') : '<tr><td colspan="5">No suppliers added</td></tr>';
+}
+
+async function loadActivity() {
+  const d = await api('/api/admin/audit');
+  document.getElementById('activityBody').innerHTML = d.events.length ? d.events.map(a => `
+    <tr><td>${a.action}</td><td>${a.item_type}</td><td>${a.item_id}</td><td>${a.created_at}</td></tr>
+  `).join('') : '<tr><td colspan="4">No logs recorded</td></tr>';
+}
+
+checkSession();
+</script>
+</body>
+</html>
