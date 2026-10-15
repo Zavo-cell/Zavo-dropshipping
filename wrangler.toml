@@ -1,0 +1,8 @@
+name = "zavo-dropshipping"
+main = "index.js"
+compatibility_date = "2026-03-01"
+
+[env.production]
+d1_databases = [
+  { binding = "DB", database_name = "zavo-db", database_id = "YOUR_D1_DATABASE_ID" }
+]
